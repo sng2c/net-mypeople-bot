@@ -91,8 +91,8 @@ has apikey=>(
 );
 
 has ua=>(
-	is=>'ro'
-	default=>sub{return LWP::UserAgent->new;});
+	is=>'ro',
+	default=>sub{return LWP::UserAgent->new;}
 );
 
 our $API_BASE = 'https://apis.daum.net/mypeople';
