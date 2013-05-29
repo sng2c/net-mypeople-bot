@@ -1,8 +1,8 @@
 package Net::MyPeople::Bot;
 use 5.010;
-use strict;
-use warnings;
+use utf8;
 use Moose;
+use namespace::autoclean;
 use Data::Dumper;
 use LWP::UserAgent;
 use LWP::Protocol::https;
@@ -10,6 +10,10 @@ use HTTP::Request::Common;
 use JSON;
 use Data::Printer;
 use URI::Escape;
+use Log::Log4perl qw(:easy);
+use File::Util qw(SL);
+use Encode;
+Log::Log4perl->easy_init($ERROR);
 
 # ABSTRACT: Implements MyPeople-Bot.
 
@@ -24,8 +28,9 @@ use URI::Escape;
 	use Data::Dumper;
 
 	my $bot = Net::MyPeople::Bot({apikey=>'MYPEOPLE_BOT_APIKEY'});
+	# You can get MYPEOPLE_BOT_APIKEY at http://dna.daum.net/myapi/authapi/mypeople
 
-	# You should set up callback url with below informations. ex) http://MYSERVER:8080/callback
+	# You should set up CALLBACK URL with below informations. ex) http://MYSERVER:8080/callback
 	my $httpd = AnyEvent::HTTPD->new (port => 8080);
 	$httpd->reg_cb (
 		'/callback' => sub {
@@ -41,7 +46,6 @@ use URI::Escape;
 	);
 	sub callback{
 		my ($action, $buddyId, $groupId, $content ) = @_;
-		p @_;
 		if   ( $action eq 'addBuddy' ){ # when someone add this bot as a buddy.
 		
 			my $buddy = $bot->buddy($buddyId); # hashref
@@ -50,7 +54,17 @@ use URI::Escape;
 
 		}
 		elsif( $action eq 'sendFromMessage' ){ # when someone send a message to this bot.
-			my @res = $bot->send($buddyId, "$content");
+
+			if($content =~ /^myp_pci:/){
+				$bot->fileDownload($content,'./sample.jpg');
+			}
+			elsif($content =~ /sendtest/){
+				$bot->send($buddyId,undef,'./sample.jpg');
+			}
+			else{
+				my @res = $bot->send($buddyId, "$content");
+			}
+
 		}
 		elsif( $action eq 'createGroup' ){ # when this bot invited to a group chat channel.
 		
@@ -99,6 +113,31 @@ use URI::Escape;
 	}
 
 	$httpd->run;
+
+=cut
+
+=head1 Description
+
+MyPeople is an instant messenger service of Daum Communications in Republic of Korea (South Korea).
+
+MyPeople Bot is API interface of MyPeople.
+
+If you want to use this bot API, 
+Unfortunately,you must have an account for http://www.daum.net.
+And you can understand Korean.
+
+Other details will be updated soon. Sorry :-)
+
+=head1 See Also
+
+=item *
+
+MyPeople : L<https://mypeople.daum.net/mypeople/web/main.do>
+
+=item *
+
+MyPeople Bot API Home : L<http://dna.daum.net/apis/mypeople>
+
 =cut
 
 has apikey=>(
@@ -125,66 +164,80 @@ sub BUILD {
 sub _call_file {
 	my $self = shift;
 	my ($apiurl, $param, $path) = @_;
-	$param->{apikey} = $self->apikey;
+	$apiurl .= '?apikey='.uri_escape($self->apikey);
+
 	foreach my $k (keys %{$param}){
 		$param->{$k} = uri_escape($param->{$k});
 	}
 
 	my $req = POST( $apiurl, Content=>$param );
+	DEBUG $req->as_string;
 	my $res = $self->ua->request( $req );
 
 	if( $res->is_success ){
-		$path =~ s@[\\/]$@@;
+		my $sl = SL;
+		$path =~ s@$sl$@@;
 		my $filepath;
 		if( -d $path ){
-			$filepath = $path.'/'.$res->filename;
+			$filepath = $path.SL.$res->filename;
 		}
 		else{
 			$filepath = $path;
 		}
-		open my $fh, '<', $filepath;
+		DEBUG $filepath;
+		open my $fh, '>', $filepath;
 		binmode($fh);
 		print $fh $res->content;
 		close $fh;
 		return $filepath;
 	}
 	else{
-		return undef;
+		return undef,$res;
 	}
 }
 sub _call_multipart {
 	my $self = shift;
 	my ($apiurl, $param) = @_;
-	$param->{apikey} = $self->apikey;
-	foreach my $k (keys %{$param}){
-		$param->{$k} = uri_escape($param->{$k});
-	}
+	$apiurl .= '?apikey='.$self->apikey;
+
+	#foreach my $k (keys %{$param}){
+	#	$param->{$k} = uri_escape($param->{$k});
+	#}
 
 	my $req = POST(	$apiurl, 
 		Content_Type => 'form-data',
 		Content => $param
 		);
-#	print $req->as_string;
+	DEBUG $req->as_string;
 
 	my $res = $self->ua->request($req);
+	DEBUG p $res;
 
 	if( $res->is_success ){
 		return from_json( $res->content );
 	}
 	else{
-		return undef;
+		return undef, $res;
 	}
 }
 sub _call {
 	my $self = shift;
 	my ($apiurl, $param) = @_;
-	$param->{apikey} = $self->apikey;
+	$apiurl .= '?apikey='.uri_escape($self->apikey);
+
 	foreach my $k (keys %{$param}){
-		$param->{$k} = uri_escape($param->{$k});
+		my $v = $param->{$k};
+		#$v = Encode::encode('UTF-8',$v);
+		$param->{$k} = uri_escape($v);
 	}
 
-	my $req = POST( $apiurl, Content=>$param );
+	my $req = POST( $apiurl, 
+		#Content_Type => 'form-data',
+		Content=>$param 
+	);
+	DEBUG $req->as_string;
 	my $res = $self->ua->request( $req );
+	DEBUG p $res;
 	
 	if( $res->is_success ){
 		return from_json( $res->content );
@@ -208,9 +261,9 @@ sub groupMembers{
 
 sub send{
 	my $self = shift;
-	my ($buddyId, $content, $attach) = @_;
-	if( $attach && -f $attach ){
-		return $self->_call_multipart($API_SEND, {buddyId=>$buddyId, attach=>[$attach]} );
+	my ($buddyId, $content, $attach_path) = @_;
+	if( $attach && -f $attach_path ){
+		return $self->_call_multipart($API_SEND, [buddyId=>$buddyId, attach=>[$attach_path]] );
 	}
 	else{
 		return $self->_call($API_SEND, {buddyId=>$buddyId, content=>$content} );
@@ -219,9 +272,9 @@ sub send{
 
 sub groupSend{
 	my $self = shift;
-	my ($groupId, $content, $attach) = @_;
-	if( $attach && -f $attach ){
-		return $self->_call_multipart($API_GROUP_SEND, {groupId=>$groupId, attach=>[$attach]} );
+	my ($groupId, $content, $attach_path) = @_;
+	if( $attach && -f $attach_path ){
+		return $self->_call_multipart($API_GROUP_SEND, [groupId=>$groupId, attach=>[$attach_path]] );
 	}
 	else{
 		return $self->_call($API_GROUP_SEND, {groupId=>$groupId, content=>$content} );
@@ -241,3 +294,5 @@ sub fileDownload{
 }
 
 
+__PACKAGE__->meta->make_immutable;
+1;
