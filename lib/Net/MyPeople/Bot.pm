@@ -262,7 +262,7 @@ sub groupMembers{
 sub send{
 	my $self = shift;
 	my ($buddyId, $content, $attach_path) = @_;
-	if( $attach && -f $attach_path ){
+	if( $attach_path && -f $attach_path ){
 		return $self->_call_multipart($API_SEND, [buddyId=>$buddyId, attach=>[$attach_path]] );
 	}
 	else{
@@ -273,7 +273,7 @@ sub send{
 sub groupSend{
 	my $self = shift;
 	my ($groupId, $content, $attach_path) = @_;
-	if( $attach && -f $attach_path ){
+	if( $attach_path && -f $attach_path ){
 		return $self->_call_multipart($API_GROUP_SEND, [groupId=>$groupId, attach=>[$attach_path]] );
 	}
 	else{
