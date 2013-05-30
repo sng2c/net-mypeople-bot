@@ -10,111 +10,14 @@ use HTTP::Request::Common;
 use JSON;
 use Data::Printer;
 use URI::Escape;
-use Log::Log4perl qw(:easy);
 use File::Util qw(SL);
 use Encode;
+use Log::Log4perl qw(:easy);
 Log::Log4perl->easy_init($ERROR);
 
 # ABSTRACT: Implements MyPeople-Bot.
 
 # VERSION
-
-=pod 
-
-=head1 SYNOPSIS
-
-	use Net::MyPeople::Bot;
-	use AnyEvent::HTTPD;
-	use Data::Dumper;
-
-	my $bot = Net::MyPeople::Bot({apikey=>'MYPEOPLE_BOT_APIKEY'});
-	# You can get MYPEOPLE_BOT_APIKEY at http://dna.daum.net/myapi/authapi/mypeople
-
-	# You should set up CALLBACK URL with below informations. ex) http://MYSERVER:8080/callback
-	my $httpd = AnyEvent::HTTPD->new (port => 8080);
-	$httpd->reg_cb (
-		'/callback' => sub {
-			my ($httpd, $req) = @_;
-
-			my $action = $req->parm('action');
-			my $buddyId = $req->parm('buddyId');
-			my $groupId = $req->parm('groupId');
-			my $content = $req->parm('content');
-
-			callback( $action, $buddyId, $groupId, $content );
-		}
-	);
-	sub callback{
-		my ($action, $buddyId, $groupId, $content ) = @_;
-		if   ( $action eq 'addBuddy' ){ # when someone add this bot as a buddy.
-		
-			my $buddy = $bot->buddy($buddyId); # hashref
-			my $buddy_name = $buddy->{buddys}->{name};
-			my $res = $bot->send($buddyId, "Nice to meet you, $buddy_name");
-
-		}
-		elsif( $action eq 'sendFromMessage' ){ # when someone send a message to this bot.
-
-			if($content =~ /^myp_pci:/){
-				$bot->fileDownload($content,'./sample.jpg');
-			}
-			elsif($content =~ /sendtest/){
-				$bot->send($buddyId,undef,'./sample.jpg');
-			}
-			else{
-				my @res = $bot->send($buddyId, "$content");
-			}
-
-		}
-		elsif( $action eq 'createGroup' ){ # when this bot invited to a group chat channel.
-		
-			my $res = $bot->groupSend($groupId, 'Nice to meet you, guys.');
-			# CONTENT
-			# [
-			# 	{"buddyId":"BU_ey3aPnSCpzx3ccwqidwdfg00","isBot":"Y","name":"testbot","photoId":"myp_pub:51A586C2074DB00010"},
-			# 	{"buddyId":"BU_ey3aPnSCpzx3ccwqidwdfg00","isBot":"Y","name":"testbot","photoId":"myp_pub:51A586C2074DB00010"}
-			# ]
-		
-		}
-		elsif( $action eq 'inviteToGroup' ){ # when someone in a group chat channel invites user to the channel.
-			
-			my $buddy_name = $content->[0]->{name};
-			my $is_bot = $content->[0]->{is_bot} eq 'Y';
-			
-			# CONTENT
-			# [
-			# 	{"buddyId":"BU_ey3aPnSCpzx3ccwqidwdfg00","isBot":"Y","name":"testbot","photoId":"myp_pub:51A586C2074DB00010"}
-			# ]
-			
-			if( $is_bot ){ # bot self
-				my $res = $bot->groupSend($groupId, 'Nide to meet you, guys');
-			}
-		
-			else{ # other guy
-				my $res = $bot->groupSend($groupId, "$buddy_name, Can you introduce your self?");
-			}
-		}
-		elsif( $action eq 'exitFromGroup' ){ # when someone in a group chat channel leaves.
-
-			my $buddy = $bot->buddy($buddyId); # hashref
-			my $buddy_name = $buddy->{buddys}->[0]->{name};
-			my $res = $bot->sendGroup($groupId, "I'll miss $buddy_name ...");
-
-		}
-		elsif( $action eq 'sendFromGroup'){ # when received from group chat channel
-			if( $content eq 'bot.goout' ){ # a reaction for an user defined command, 'bot.goout'
-				my $res = $bot->groupSend($groupId, 'Bye~');
-				$res = $bot->groupExit($groupId);
-			}
-			else{
-				my $res = $bot->groupSend($groupId, "(GROUP_ECHO) $content");
-			}
-		}
-	}
-
-	$httpd->run;
-
-=cut
 
 =head1 Description
 
@@ -125,18 +28,6 @@ MyPeople Bot is API interface of MyPeople.
 If you want to use this bot API, 
 Unfortunately,you must have an account for http://www.daum.net.
 And you can understand Korean.
-
-Other details will be updated soon. Sorry :-)
-
-=head1 See Also
-
-=item *
-
-MyPeople : L<https://mypeople.daum.net/mypeople/web/main.do>
-
-=item *
-
-MyPeople Bot API Home : L<http://dna.daum.net/apis/mypeople>
 
 =cut
 
@@ -192,7 +83,8 @@ sub _call_file {
 		return $filepath;
 	}
 	else{
-		return undef,$res;
+		ERROR p $res;
+		return undef;
 	}
 }
 sub _call_multipart {
@@ -217,7 +109,8 @@ sub _call_multipart {
 		return from_json( $res->content );
 	}
 	else{
-		return undef, $res;
+		ERROR p $res;
+		return undef;
 	}
 }
 sub _call {
@@ -243,9 +136,33 @@ sub _call {
 		return from_json( $res->content );
 	}
 	else{
-		return undef, $res;
+		ERROR p $res;
+		return undef;
 	}
 }
+=over 4
+
+=item $res = $self->buddy( BUDDY_ID )
+
+get infomations of a buddy.
+
+returns buddy info.
+
+	{
+		"buddys":
+			[
+				{
+					"buddyId":"XXXXXXXXXXXXXXX",
+					"name":"XXXX",
+					"photoId":
+					"myp_pub:XXXXXXXXXXXXXXX"
+				}
+			],
+			"code":"200",
+			"message":"Success"
+	}
+
+=cut
 
 sub buddy{
 	my $self = shift;
@@ -253,11 +170,54 @@ sub buddy{
 	return $self->_call($API_BUDDY, {buddyId=>$buddyId} );
 }
 
+=item $res = $self->groupMembers( GROUP_ID )
+
+Get members in a group.
+
+returns infos of members in the GROUP.
+
+	{
+		"buddys":
+			[
+				{
+					"buddyId":"XXXXXXXXXXXXXXX",
+					"name":"XXXX",
+					"photoId":
+					"myp_pub:XXXXXXXXXXXXXXX"
+				},
+				{
+					"buddyId":"XXXXXXXXXXXXXXX",
+					"name":"XXXX",
+					"photoId":
+					"myp_pub:XXXXXXXXXXXXXXX"
+				},
+
+				...
+			],
+			"code":"200",
+			"message":"Success"
+	}
+
+
+=cut
+
 sub groupMembers{
 	my $self = shift;
 	my ($groupId) = @_;
 	return $self->_call($API_GROUP_MEMBERS, {groupId=>$groupId} );
 }
+
+=item $res = $self->send( BUDDY_ID, TEXT )
+
+=item $res = $self->send( BUDDY_ID, undef, FILEPATH )
+
+send text to a buddy.
+
+If you set FILEPATH, it sends the file to the buddy.
+
+returns result of request.
+
+=cut 
 
 sub send{
 	my $self = shift;
@@ -270,6 +230,18 @@ sub send{
 	}
 }
 
+=item $res = $self->groupSend( GROUP_ID, TEXT )
+
+=item $res = $self->groupSend( GROUP_ID, undef, FILEPATH )
+
+send text to a group.
+
+If you set FILEPATH, it sends the file to the group.
+
+returns result of request.
+
+=cut 
+
 sub groupSend{
 	my $self = shift;
 	my ($groupId, $content, $attach_path) = @_;
@@ -281,11 +253,29 @@ sub groupSend{
 	}
 }
 
+=item $res = $self->groupExit( GROUP_ID )
+
+exit from a group.
+
+returns result of request.
+
+=cut 
+
 sub groupExit{
 	my $self = shift;
 	my ($groupId) = @_;
 	return $self->_call($API_GROUP_EXIT, {groupId=>$groupId} );
 }
+
+=item $res = $self->fileDownload( FILE_ID, DIRPATH_OR_FILEPATH )
+
+download attached file with FILE_ID.
+
+If you set directory path on second argument, the file is named automatically by 'Content-Disposition' header.
+
+returns path of the file saved.
+
+=cut 
 
 sub fileDownload{
 	my $self = shift;
@@ -293,6 +283,168 @@ sub fileDownload{
 	return $self->_call_file($API_FILE_DOWNLOAD, {fileId=>$fileId} , $path);
 }
 
-
 __PACKAGE__->meta->make_immutable;
 1;
+
+=back
+
+=head2 Callbacks
+
+See SYNOPSIS.
+
+=head1 See Also
+
+=item *
+
+MyPeople : L<https://mypeople.daum.net/mypeople/web/main.do>
+
+=item *
+
+MyPeople Bot API Home : L<http://dna.daum.net/apis/mypeople>
+
+=cut
+
+
+=head1 SYNOPSIS
+
+	#!/usr/bin/env perl 
+
+	use strict;
+	use warnings;
+	use utf8;
+
+	use Net::MyPeople::Bot;
+	use AnyEvent::HTTPD;
+	use Data::Printer;
+	use JSON;
+	use Log::Log4perl qw(:easy);
+	Log::Log4perl->easy_init($DEBUG); # you can see requests in Net::MyPeople::Bot.
+
+	my $APIKEY = 'OOOOOOOOOOOOOOOOOOOOOOOOOO'; 
+	my $bot = Net::MyPeople::Bot->new({apikey=>$APIKEY});
+
+	# You should set up callback url with below informations. ex) http://MYSERVER:8080/callback
+	my $httpd = AnyEvent::HTTPD->new (port => 8080);
+	$httpd->reg_cb (
+		'/'=> sub{
+			my ($httpd, $req) = @_;
+			$req->respond( { content => ['text/html','hello'] });
+		},
+		'/callback' => sub {
+			my ($httpd, $req) = @_;
+
+			my $action = $req->parm('action');
+			my $buddyId = $req->parm('buddyId');
+			my $groupId = $req->parm('groupId');
+			my $content = $req->parm('content');
+
+			callback( $action, $buddyId, $groupId, $content );
+		}
+	);
+
+	sub callback{
+		my ($action, $buddyId, $groupId, $content ) = @_;
+		p @_;
+
+		if   ( $action eq 'addBuddy' ){ # when someone add this bot as a buddy.
+			# $buddyId : buddyId who adds this bot to buddys.
+			# $groupId : ""
+			# $content : buddy info for buddyId 
+			# [
+			#    {"buddyId":"XXXXXXXXXXXXXXXXXXXX","isBot":"N","name":"XXXX","photoId":"myp_pub:XXXXXX"},
+			# ]
+
+			my $buddy = from_json($content)->[0]; # 
+			my $buddy_name = $buddy->{buddys}->{name};
+			my $res = $bot->send($buddyId, "Nice to meet you, $buddy_name");
+
+		}
+		elsif( $action eq 'sendFromMessage' ){ # when someone send a message to this bot.
+			# $buddyId : buddyId who sends message
+			# $groupId : ""
+			# $content : text
+
+			my @res = $bot->send($buddyId, "$content");
+			if($content =~ /^myp_pci:/){
+				$bot->fileDownload($content,'./sample.jpg');
+				# you can also download a profile image with buddy's photoId,'myp_pub:XXXXXXX'
+			}
+			if($content =~ /sendtest/){
+				$bot->send($buddyId,undef,'./sample.jpg');
+			}
+			if($content =~ /buddytest/){
+				my $buddy = $bot->buddy($buddyId);
+				#{"buddys":[{"buddyId":"XXXXXXXXXXXXXXX","name":"XXXX","photoId":"myp_pub:XXXXXXXXXXXXXXX"}],"code":"200","message":"Success"}
+				$bot->send($buddyId, to_json($buddy));
+			}
+		}
+		elsif( $action eq 'createGroup' ){ # when this bot invited to a group chat channel.
+			# $buddyId : buddyId who creates
+			# $groupId : new group id
+			# $content : members
+			# [
+			#    {"buddyId":"XXXXXXXXXXXXXXXXXXXX","isBot":"N","name":"XXXX","photoId":"myp_pub:XXXXXX"},
+			#    {"buddyId":"XXXXXXXXXXXXXXXXXXXX","isBot":"N","name":"XXXX","photoId":"myp_pub:XXXXXX"},
+			#    {"buddyId":"XXXXXXXXXXXXXXXXXXXX","isBot":"Y","name":"XXXX","photoId":"myp_pub:XXXXXX"}
+			# ]
+
+			my $members = from_json($content);
+			my @names;
+			foreach my $member (@{$members}){
+				next if $member->{isBot} eq 'Y';# bot : The group must have only one bot. so, isBot='Y' means bot itself.
+				push(@names, $member->{name});
+			}
+
+			my $res = $bot->groupSend($groupId, (join(',',@names)).'!! Nice to meet you.');
+		
+		}
+		elsif( $action eq 'inviteToGroup' ){ # when someone in a group chat channel invites user to the channel.
+			# $buddyId : buddyId who invites member
+			# $groupId : group id where new member is invited
+			# $content : 
+			# [
+			#    {"buddyId":"XXXXXXXXXXXXXXXXXXXX","isBot":"N","name":"XXXX","photoId":"myp_pub:XXXXXX"},
+			#    {"buddyId":"XXXXXXXXXXXXXXXXXXXX","isBot":"Y","name":"XXXX","photoId":"myp_pub:XXXXXX"}
+			# ]
+			my $invited = from_json($content);
+			my @names;
+			foreach my $member (@{$invited}){
+				next if $member->{isBot} eq 'Y';
+				push(@names, $member->{name});
+			}
+			my $res = $bot->groupSend($groupId, (join(',',@names))."!! Can you introduce your self?");
+
+		}
+		elsif( $action eq 'exitFromGroup' ){ # when someone in a group chat channel leaves.
+			# $buddyId : buddyId who exits
+			# $groupId : group id where member exits
+			# $content : ""
+
+			my $buddy = $bot->buddy($buddyId); # hashref
+			my $buddy_name = $buddy->{buddys}->[0]->{name};
+			my $res = $bot->sendGroup($groupId, "I'll miss $buddy_name ...");
+
+		}
+		elsif( $action eq 'sendFromGroup'){ # when received from group chat channel
+			# $buddyId : buddyId who sends message
+			# $groupId : group id where message is sent
+			# $content : text
+
+			if( $content eq 'bot.goout' ){ # a reaction for an user defined command, 'bot.goout'
+				my $res = $bot->groupSend($groupId, 'Bye~');
+				$res = $bot->groupExit($groupId);
+			}
+			elsif($content =~ /membertest/){
+				my $members= $bot->groupMembers($groupId);
+				$bot->groupSend($groupId, to_json($members));
+			}
+			else{
+
+				my $res = $bot->groupSend($groupId, "(GROUP_ECHO) $content");
+			}
+		}
+	}
+	print "Bot is started\n";
+	$httpd->run;
+
+=cut
