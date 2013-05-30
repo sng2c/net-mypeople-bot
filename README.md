@@ -159,7 +159,7 @@ If you want to use this bot API,
 Unfortunately,you must have an account for http://www.daum.net.
 And you can understand Korean.
 
-### METHODS
+## METHODS
 
 - $res = $self->buddy( BUDDY\_ID )
 
