@@ -22,7 +22,7 @@ version 0.200
 	Log::Log4perl->easy_init($DEBUG); # you can see requests in Net::MyPeople::Bot.
 
 	my $APIKEY = 'OOOOOOOOOOOOOOOOOOOOOOOOOO'; 
-	my $bot = Net::MyPeople::Bot->new({apikey=>$APIKEY});
+	my $bot = Net::MyPeople::Bot->new(apikey=>$APIKEY);
 
 	# You should set up callback url with below informations. ex) http://MYSERVER:8080/callback
 	my $httpd = AnyEvent::HTTPD->new (port => 8080);
@@ -149,7 +149,7 @@ version 0.200
 	print "Bot is started\n";
 	$httpd->run;
 
-# Description
+# DESCRIPTION
 
 MyPeople is an instant messenger service of Daum Communications in Republic of Korea (South Korea).
 
@@ -158,6 +158,8 @@ MyPeople Bot is API interface of MyPeople.
 If you want to use this bot API, 
 Unfortunately,you must have an account for http://www.daum.net.
 And you can understand Korean.
+
+### METHODS
 
 - $res = $self->buddy( BUDDY\_ID )
 
@@ -239,11 +241,11 @@ And you can understand Korean.
 
     returns path of the file saved.
 
-## Callbacks
+## CALLBACK
 
 See SYNOPSIS.
 
-# See Also
+# SEE ALSO
 
 - MyPeople : [https://mypeople.daum.net/mypeople/web/main.do](https://mypeople.daum.net/mypeople/web/main.do)
 - MyPeople Bot API Home : [http://dna.daum.net/apis/mypeople](http://dna.daum.net/apis/mypeople)

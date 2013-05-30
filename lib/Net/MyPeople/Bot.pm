@@ -19,7 +19,7 @@ Log::Log4perl->easy_init($ERROR);
 
 # VERSION
 
-=head1 Description
+=head1 DESCRIPTION
 
 MyPeople is an instant messenger service of Daum Communications in Republic of Korea (South Korea).
 
@@ -140,6 +140,9 @@ sub _call {
 		return undef;
 	}
 }
+
+=head2 METHODS
+
 =over 4
 
 =item $res = $self->buddy( BUDDY_ID )
@@ -288,11 +291,13 @@ __PACKAGE__->meta->make_immutable;
 
 =back
 
-=head2 Callbacks
+=head2 CALLBACK
 
 See SYNOPSIS.
 
-=head1 See Also
+=head1 SEE ALSO
+
+=over
 
 =item *
 
@@ -301,6 +306,8 @@ MyPeople : L<https://mypeople.daum.net/mypeople/web/main.do>
 =item *
 
 MyPeople Bot API Home : L<http://dna.daum.net/apis/mypeople>
+
+=back
 
 =cut
 
@@ -321,7 +328,7 @@ MyPeople Bot API Home : L<http://dna.daum.net/apis/mypeople>
 	Log::Log4perl->easy_init($DEBUG); # you can see requests in Net::MyPeople::Bot.
 
 	my $APIKEY = 'OOOOOOOOOOOOOOOOOOOOOOOOOO'; 
-	my $bot = Net::MyPeople::Bot->new({apikey=>$APIKEY});
+	my $bot = Net::MyPeople::Bot->new(apikey=>$APIKEY);
 
 	# You should set up callback url with below informations. ex) http://MYSERVER:8080/callback
 	my $httpd = AnyEvent::HTTPD->new (port => 8080);
