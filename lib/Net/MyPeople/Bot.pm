@@ -108,7 +108,7 @@ sub _call_multipart {
 	DEBUG p $res;
 
 	if( $res->is_success ){
-		return from_json( $res->content );
+		return from_json( $res->content , {utf8 => 1} );
 	}
 	else{
 		ERROR p $res;
@@ -135,7 +135,7 @@ sub _call {
 	DEBUG p $res;
 	
 	if( $res->is_success ){
-		return from_json( $res->content );
+		return from_json( $res->content , {utf8 => 1} );
 	}
 	else{
 		ERROR p $res;
