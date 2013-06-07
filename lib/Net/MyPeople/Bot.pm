@@ -11,7 +11,7 @@ use JSON;
 use Data::Printer;
 use URI::Escape;
 use File::Util qw(SL);
-use Encode;
+use Encode qw(is_utf8 _utf8_off);
 use Log::Log4perl qw(:easy);
 Log::Log4perl->easy_init($ERROR);
 
@@ -47,6 +47,8 @@ our $API_GROUP_MEMBERS = $API_BASE . '/group/members.json';
 our $API_GROUP_SEND = $API_BASE . '/group/send.json';
 our $API_GROUP_EXIT = $API_BASE . '/group/exit.json';
 our $API_FILE_DOWNLOAD = $API_BASE . '/file/download.json';
+
+our $API_SEND_LENGTH = 1000;
 
 sub BUILD {
 	my $self = shift;
@@ -212,11 +214,14 @@ sub groupMembers{
 
 =item $res = $self->send( BUDDY_ID, TEXT )
 
+=item $res = $self->send( BUDDY_ID, TEXT, undef, $do_not_split )
+
 =item $res = $self->send( BUDDY_ID, undef, FILEPATH )
 
 send text to a buddy.
 
 If you set FILEPATH, it sends the file to the buddy.
+
 
 returns result of request.
 
@@ -224,16 +229,31 @@ returns result of request.
 
 sub send{
 	my $self = shift;
-	my ($buddyId, $content, $attach_path) = @_;
+	my ($buddyId, $content, $attach_path, $do_not_split) = @_;
 	if( $attach_path && -f $attach_path ){
 		return $self->_call_multipart($API_SEND, [buddyId=>$buddyId, attach=>[$attach_path]] );
 	}
 	else{
-		return $self->_call($API_SEND, {buddyId=>$buddyId, content=>$content} );
+		my @chunks;
+		if( !$do_not_split && length $content > $API_SEND_LENGTH ){
+			@chunks = split(/(.{$API_SEND_LENGTH})/, $content);
+		}
+		else{
+			push(@chunks,$content);
+		}
+
+		my $res;
+		foreach my $chunk (@chunks){
+			_utf8_off($chunk) if is_utf8 $chunk;
+			$res = $self->_call($API_SEND, {buddyId=>$buddyId, content=>$chunk} );
+		}
+		return $res;
 	}
 }
 
 =item $res = $self->groupSend( GROUP_ID, TEXT )
+
+=item $res = $self->groupSend( GROUP_ID, TEXT, undef, $do_not_split )
 
 =item $res = $self->groupSend( GROUP_ID, undef, FILEPATH )
 
@@ -247,12 +267,25 @@ returns result of request.
 
 sub groupSend{
 	my $self = shift;
-	my ($groupId, $content, $attach_path) = @_;
+	my ($groupId, $content, $attach_path, $do_not_split) = @_;
 	if( $attach_path && -f $attach_path ){
 		return $self->_call_multipart($API_GROUP_SEND, [groupId=>$groupId, attach=>[$attach_path]] );
 	}
 	else{
-		return $self->_call($API_GROUP_SEND, {groupId=>$groupId, content=>$content} );
+		my @chunks;
+		if( !$do_not_split && length $content > $API_SEND_LENGTH ){
+			@chunks = split(/(.{$API_SEND_LENGTH})/, $content);
+		}
+		else{
+			push(@chunks,$content);
+		}
+
+		my $res;
+		foreach my $chunk (@chunks){
+			_utf8_off($chunk) if is_utf8 $chunk;
+			$res = $self->_call($API_GROUP_SEND, {groupId=>$groupId, content=>$chunk} );
+		}
+		return $res;
 	}
 }
 

@@ -4,7 +4,7 @@ Net::MyPeople::Bot - Implements MyPeople-Bot.
 
 # VERSION
 
-version 0.200
+version 0.300
 
 # SYNOPSIS
 
@@ -210,6 +210,7 @@ And you can understand Korean.
     	}
 
 - $res = $self->send( BUDDY\_ID, TEXT )
+- $res = $self->send( BUDDY\_ID, TEXT, undef, $do\_not\_split )
 - $res = $self->send( BUDDY\_ID, undef, FILEPATH )
 
     send text to a buddy.
@@ -219,6 +220,7 @@ And you can understand Korean.
     returns result of request.
 
 - $res = $self->groupSend( GROUP\_ID, TEXT )
+- $res = $self->groupSend( GROUP\_ID, TEXT, undef, $do\_not\_split )
 - $res = $self->groupSend( GROUP\_ID, undef, FILEPATH )
 
     send text to a group.
