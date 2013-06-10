@@ -59,10 +59,6 @@ sub _call_file {
 	my ($apiurl, $param, $path) = @_;
 	$apiurl .= '?apikey='.uri_escape($self->apikey);
 
-	foreach my $k (keys %{$param}){
-		$param->{$k} = uri_escape($param->{$k});
-	}
-
 	my $req = POST( $apiurl, Content=>$param );
 	DEBUG $req->as_string;
 	my $res = $self->ua->request( $req );
@@ -119,12 +115,6 @@ sub _call {
 	my $self = shift;
 	my ($apiurl, $param) = @_;
 	$apiurl .= '?apikey='.uri_escape($self->apikey);
-
-	foreach my $k (keys %{$param}){
-		my $v = $param->{$k};
-		#$v = Encode::encode('UTF-8',$v);
-		$param->{$k} = uri_escape($v);
-	}
 
 	my $req = POST( $apiurl, 
 		#Content_Type => 'form-data',

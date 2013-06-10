@@ -4,7 +4,7 @@ Net::MyPeople::Bot - Implements MyPeople-Bot.
 
 # VERSION
 
-version 0.301
+version 0.310
 
 # SYNOPSIS
 
