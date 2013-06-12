@@ -4,7 +4,7 @@ Net::MyPeople::Bot - Implements MyPeople-Bot.
 
 # VERSION
 
-version 0.310
+version 0.320
 
 # SYNOPSIS
 
@@ -158,6 +158,17 @@ MyPeople Bot is API interface of MyPeople.
 If you want to use this bot API, 
 Unfortunately,you must have an account for http://www.daum.net.
 And you can understand Korean.
+
+## PROPERTIES 
+
+- apikey 
+
+    required. put here MyPeople Bot APIKEY.
+
+- web\_proxy\_base
+
+    optional. If you don't have public IP, use [https://github.com/sng2c/mypeople-bot-buffer](https://github.com/sng2c/mypeople-bot-buffer) and put here as 'http://HOST:IP/proxy/'.
+    All of API urls are affected like 'http://HOST:IP/proxy/http://...'. 
 
 ## METHODS
 
