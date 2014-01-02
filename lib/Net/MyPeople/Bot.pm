@@ -264,7 +264,6 @@ sub send{
 
 		my $res;
 		foreach my $chunk (@chunks){
-			_utf8_off($chunk) if is_utf8 $chunk;
 			$res = $self->_call($API_SEND, {buddyId=>$buddyId, content=>$chunk} );
 		}
 		return $res;
@@ -302,7 +301,6 @@ sub groupSend{
 
 		my $res;
 		foreach my $chunk (@chunks){
-			_utf8_off($chunk) if is_utf8 $chunk;
 			$res = $self->_call($API_GROUP_SEND, {groupId=>$groupId, content=>$chunk} );
 		}
 		return $res;
